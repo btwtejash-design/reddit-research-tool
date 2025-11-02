@@ -54,52 +54,52 @@ app.get("/test", (req, res) => {
 });
 
 // ✅ Main Reddit Search API
+// inside /api/reddit
 app.get("/api/reddit", async (req, res) => {
   const { q: query, sort = "relevance", t: time = "all", limit = 20 } = req.query;
-  const parsedLimit = parseInt(limit);
-  const actualLimit = isNaN(parsedLimit) ? 20 : Math.min(parsedLimit, 100);
+  const actualLimit = Math.min(parseInt(limit) || 20, 100);
 
-  console.log(`🟢 /api/reddit → Query: '${query}' | Limit: ${actualLimit}`);
-
-  if (!query) {
-    return res.status(400).json({ error: "Missing query parameter 'q'" });
-  }
+  if (!query) return res.status(400).json({ error: "Missing 'q' query param" });
 
   try {
-    const redditPath = `/search.json?q=${encodeURIComponent(query)}&sort=${encodeURIComponent(sort)}&t=${encodeURIComponent(time)}&limit=${actualLimit}`;
-    console.log("🔗 Reddit API URL:", redditClient.defaults.baseURL + redditPath);
+    const redditUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=${sort}&t=${time}&limit=${actualLimit}`;
 
-    const redditResponse = await redditClient.get(redditPath);
-
-    if (redditResponse.status >= 400) {
-      console.error("❌ Reddit error:", redditResponse.status);
-      return res.status(403).json({ error: `Reddit returned ${redditResponse.status}` });
-    }
-
-    const children = redditResponse.data?.data?.children || [];
-    console.log(`📊 Reddit returned ${children.length} results.`);
-
-    const posts = children.map((child) => {
-      const d = child.data || {};
-      return {
-        title: d.title,
-        subreddit: d.subreddit,
-        ups: d.score || 0,
-        url: d.url,
-        author: d.author,
-        created_utc: d.created_utc,
-        comments: d.num_comments,
-        thumbnail: d.thumbnail,
-        permalink: d.permalink,
-      };
+    const response = await axios.get(redditUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        Accept: "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        Referer: "https://www.reddit.com/",
+        "Accept-Encoding": "identity", // 👈 disables gzip (helps Render)
+      },
+      timeout: 10000,
+      decompress: false, // 👈 prevents 403 from compression mismatch
     });
 
+    const children = response.data?.data?.children || [];
+    const posts = children.map((c) => ({
+      title: c.data.title,
+      subreddit: c.data.subreddit,
+      ups: c.data.ups,
+      url: c.data.url,
+      author: c.data.author,
+      created_utc: c.data.created_utc,
+      comments: c.data.num_comments,
+      thumbnail: c.data.thumbnail,
+      permalink: c.data.permalink,
+    }));
+
     res.json({ posts });
-  } catch (error) {
-    console.error("🔥 Axios/Reddit error:", error.message);
-    res.status(500).json({ error: "Failed to fetch Reddit posts" });
+  } catch (err) {
+    console.error("❌ Reddit fetch failed:", err.message, err.response?.status);
+    res.status(err.response?.status || 500).json({
+      error: "Reddit API blocked this request (403)",
+      details: err.message,
+    });
   }
 });
+
 
 // 🔸 /r/:subreddit hot posts
 app.get("/reddit/:subreddit", async (req, res) => {
