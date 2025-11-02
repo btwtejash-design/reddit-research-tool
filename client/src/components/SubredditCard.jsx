@@ -1,33 +1,40 @@
-// src/components/SubredditCard.jsx (patched: table row <tr>/<td> for semantic table fit.
-// Colors: slate text, cyan link hover, emerald accents on values. Added selftext preview like screenshot desc.
-// Hover slate-50. Responsive: hides cols on md/lg via classes. Matches "Subreddit insights" style.)
-
+// src/components/SubredditCard.jsx
 export default function SubredditCard({ post }) {
-  const { title, subreddit, score, num_comments, selftext, created_utc, url, permalink } = post;
-  const date = new Date(created_utc * 1000).toLocaleDateString(); // Optional, not in screenshot
+  const { title, subreddit, score, num_comments, selftext, url, permalink } = post;
 
   return (
-    <tr className="hover:bg-slate-50 transition-colors divide-x divide-slate-100">
-      <td className="px-6 py-4">
+    <div className="card fade-in">
+      <div className="card-body">
         <a 
-          href={url} 
+          href={url || `https://www.reddit.com${permalink}`} 
           target="_blank" 
           rel="noopener noreferrer" 
-          className="text-slate-900 hover:text-cyan-600 font-medium block line-clamp-2"
+          className="post-link"
         >
-          {title}
+          <h5 style={{ marginBottom: '0.5rem' }}>{title}</h5>
         </a>
         {selftext && (
-          <span className="text-sm text-slate-600 block mt-1">
-            {selftext.substring(0, 100)}...
-          </span>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+            {selftext.substring(0, 150)}...
+          </p>
         )}
-      </td>
-      <td className="px-6 py-4 text-sm text-slate-900 hidden md:table-cell">r/{subreddit}</td>
-      <td className="px-6 py-4 text-right text-sm text-slate-900 hidden lg:table-cell">{score}</td>
-      <td className="px-6 py-4 text-right">
-        <span className="text-emerald-600 font-semibold">{num_comments}</span>
-      </td>
-    </tr>
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <a
+            href={`https://www.reddit.com/r/${subreddit}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-emerald"
+          >
+            r/{subreddit}
+          </a>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+            ⬆️ {score?.toLocaleString() || 0}
+          </span>
+          <span className="text-emerald" style={{ fontWeight: '600' }}>
+            💬 {num_comments?.toLocaleString() || 0}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }

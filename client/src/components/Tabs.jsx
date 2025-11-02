@@ -1,8 +1,12 @@
-// src/components/Tabs.jsx (like "Quick tips" sections: green active)
-import React, { useState } from 'react';
+// src/components/Tabs.jsx
+import React, { useState, useEffect } from 'react';
+
 export default function Tabs({ tabs, onTabChange }) {
-  
   const [activeTab, setActiveTab] = useState(tabs[0]?.id || 0);
+
+  useEffect(() => {
+    setActiveTab(tabs[0]?.id || 0);
+  }, [tabs]);
 
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);
@@ -10,17 +14,13 @@ export default function Tabs({ tabs, onTabChange }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-      <div className="flex space-x-0">
+    <div className="tabs-container">
+      <div className="tabs-list">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => handleTabClick(tab.id)}
-            className={`w-full px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'bg-green-50 text-green-700 border-b-2 border-green-500'
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
-            }`}
+            className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
           >
             {tab.label}
           </button>

@@ -12,9 +12,9 @@ import About from "./pages/About.jsx";
 export default function App() {
   return (
     <Router>
-      <div className="bg-gray-950 min-h-screen text-white">
+      <div className="min-h-screen">
         <Navbar />
-        <div className="pt-20 px-4">
+        <main className="main-content">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/audience" element={<AudienceSearch />} />
@@ -22,7 +22,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/about" element={<About />} />
           </Routes>
-        </div>
+        </main>
       </div>
     </Router>
   );

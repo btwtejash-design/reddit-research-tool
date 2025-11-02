@@ -1,145 +1,170 @@
-import { useState, useEffect } from 'react';
-import Loader from '../components/Loader';
-import ErrorMessage from '../components/ErrorMessage';
-import Tabs from '../components/Tabs';
-import { fetchRedditPosts } from '../utils/redditAPI';
-
-const CURATED_AUDIENCES = [
-  { id: 0, label: 'Search', description: 'Enter your own audience query' },
-  { id: 1, label: 'Curated: Freelancers', query: 'freelancers OR "gig economy" OR upwork' },
-  { id: 2, label: 'Curated: Entrepreneurs', query: 'startup OR entrepreneur OR "side hustle"' },
-  { id: 3, label: 'Curated: Notion Users', query: 'notion OR "notion app" OR "notion templates"' },
-];
+import { useState } from 'react';
+import { AUDIENCE_COLLECTIONS, searchCollections } from '../utils/audienceCollections';
+import SubredditCollection from '../components/SubredditCollection';
 
 export default function AudienceSearch() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState(0);
-  const [query, setQuery] = useState('');
+  const [selectedCollection, setSelectedCollection] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredCollections, setFilteredCollections] = useState(AUDIENCE_COLLECTIONS);
 
-  const tabs = CURATED_AUDIENCES;
-
-  useEffect(() => {
-    if (activeTab > 0) {
-      const curatedQuery = tabs[activeTab].query;
-      handleSearch(curatedQuery);
-    }
-  }, [activeTab]);
-
-  const handleSearch = async (searchQuery) => {
-    if (!searchQuery) return;
-    setLoading(true);
-    setError(null);
-    setQuery(searchQuery);
-    try {
-      const results = await fetchRedditPosts(searchQuery, 'relevance', 'month', 20);
-      setPosts(results);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  const handleSearch = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    if (query.trim() === '') {
+      setFilteredCollections(AUDIENCE_COLLECTIONS);
+    } else {
+      const results = searchCollections(query);
+      setFilteredCollections(results);
     }
   };
 
-  const handleTabChange = (tabId) => {
-    setActiveTab(tabId);
-    if (tabId === 0) {
-      setPosts([]);
-      setQuery('');
-    }
+  const handleCollectionClick = (collection) => {
+    setSelectedCollection(collection);
   };
 
-  const fullQuery = tabs[activeTab]?.query || query;
+  const handleBack = () => {
+    setSelectedCollection(null);
+  };
 
+  // If a collection is selected, show its subreddits
+  if (selectedCollection) {
+    return (
+      <div className="container">
+        <div style={{ marginBottom: '2rem' }}>
+          <button
+            onClick={handleBack}
+            className="btn btn-outline-secondary"
+            style={{ marginBottom: '1rem' }}
+          >
+            ← Back to Collections
+          </button>
+          <SubredditCollection 
+            subreddits={selectedCollection.subreddits}
+            audienceName={selectedCollection.name}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Show collection grid
   return (
-    <div className="container py-5">
-      {/* Header / Search Area */}
-      <div className="bg-white border rounded-4 shadow-sm p-4 mb-4">
-        <h2 className="fw-bold text-dark mb-1">Audience-Based Search</h2>
-        <p className="text-muted mb-4">Discover Reddit discussions from specific user groups.</p>
-
-        <Tabs tabs={tabs} onTabChange={handleTabChange} />
-
-        {activeTab === 0 && (
-          <div className="mt-4">
-            <input
-              type="text"
-              className="form-control py-3 px-4 rounded-3 border border-emerald"
-              placeholder="e.g., People who use Notion for productivity"
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch(e.target.value)}
-            />
-          </div>
-        )}
+    <div className="container">
+      <div style={{ marginBottom: '3rem', textAlign: 'center' }}>
+        <h1>Discover Audience Collections</h1>
+        <p style={{ 
+          fontSize: '1.125rem', 
+          color: 'var(--text-secondary)', 
+          maxWidth: '700px', 
+          margin: '0 auto',
+          marginBottom: '2rem'
+        }}>
+          Explore curated collections of Reddit communities organized by audience type
+        </p>
+        
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search collections (e.g., pet lovers, developers, travelers)..."
+            value={searchQuery}
+            onChange={handleSearch}
+            style={{ fontSize: '1rem', padding: '1rem' }}
+          />
+        </div>
       </div>
 
-      {loading && <Loader />}
-      {error && <ErrorMessage message={error} />}
-
-      {!loading && !error && posts.length > 0 && (
-        <>
-          <div className="bg-white border rounded-4 shadow-sm p-3 mb-3">
-            <small className="text-secondary">
-              Showing <span className="fw-semibold">{posts.length}</span> results for "<em>{fullQuery}</em>"
-            </small>
-          </div>
-
-          {/* Results Table */}
-          <div className="bg-white border rounded-4 shadow-sm overflow-hidden">
-            <div className="d-flex bg-emerald-50 fw-semibold text-dark py-2 px-4 border-bottom">
-              <div className="flex-grow-1 col-title">Title</div>
-              <div className="col-sub text-center">Subreddit</div>
-              <div className="col-up text-center d-none d-md-block">Upvotes</div>
-              <div className="col-com text-center">Comments</div>
-            </div>
-
-            {posts.map((post, index) => (
-              <div
-                key={post.id || index}
-                className="d-flex align-items-center py-3 px-4 border-bottom"
-              >
-                {/* Title → link to Reddit post */}
-                <div className="flex-grow-1 col-title text-truncate">
-                  <a
-                    href={`https://www.reddit.com${post.permalink}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-decoration-none fw-semibold text-dark hover-emerald"
-                  >
-                    {post.title}
-                  </a>
-                </div>
-
-                {/* Subreddit → link to subreddit */}
-                <div className="col-sub text-center text-muted">
-                  <a
-                    href={`https://www.reddit.com/r/${post.subreddit}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-decoration-none text-muted hover-emerald"
-                  >
-                    r/{post.subreddit}
-                  </a>
-                </div>
-
-                <div className="col-up text-center d-none d-md-block text-muted">
-                  {post.score?.toLocaleString() || 0}
-                </div>
-
-                <div className="col-com text-center text-muted">
-                  {post.num_comments?.toLocaleString() || 0}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {!loading && !error && posts.length === 0 && activeTab === 0 && (
-        <div className="bg-white border rounded-4 shadow-sm text-center py-5 mt-4">
-          <p className="text-secondary mb-0">Enter an audience query above to get started.</p>
+      {filteredCollections.length === 0 ? (
+        <div className="card text-center" style={{ padding: '3rem' }}>
+          <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+            No collections found matching "{searchQuery}". Try a different search term.
+          </p>
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gap: '1.5rem'
+        }}>
+          {filteredCollections.map((collection) => (
+            <CollectionCard
+              key={collection.id}
+              collection={collection}
+              onClick={() => handleCollectionClick(collection)}
+            />
+          ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function CollectionCard({ collection, onClick }) {
+  const { name, description, icon, subreddits } = collection;
+
+  return (
+    <div
+      className="card"
+      onClick={onClick}
+      style={{
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        padding: '1.5rem',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-4px)';
+        e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+      }}
+    >
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '1rem',
+        marginBottom: '1rem'
+      }}>
+        <span style={{ fontSize: '2.5rem' }}>{icon}</span>
+        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{name}</h3>
+      </div>
+      
+      <p style={{ 
+        color: 'var(--text-secondary)', 
+        marginBottom: '1rem',
+        flex: 1,
+        fontSize: '0.9375rem'
+      }}>
+        {description}
+      </p>
+      
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingTop: '1rem',
+        borderTop: '1px solid var(--border-color)'
+      }}>
+        <span style={{ 
+          fontSize: '0.875rem', 
+          color: 'var(--text-secondary)',
+          fontWeight: 500
+        }}>
+          {subreddits.length} subreddit{subreddits.length !== 1 ? 's' : ''}
+        </span>
+        <span style={{ 
+          color: 'var(--primary)',
+          fontWeight: 600,
+          fontSize: '0.875rem'
+        }}>
+          Explore →
+        </span>
+      </div>
     </div>
   );
 }

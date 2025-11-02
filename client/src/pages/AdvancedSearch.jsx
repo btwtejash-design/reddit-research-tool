@@ -66,38 +66,43 @@ export default function AdvancedSearch() {
   }, []);
 
   return (
-    <div className="container py-5">
+    <div className="container">
       {/* Search Section */}
-      <div className="screenshot-card">
+      <div className="card">
         <h2 className="screenshot-header">Find the perfect subreddit — fast</h2>
         <p className="screenshot-subheader">
           Discover niche communities, analyze engagement, and track growth.
         </p>
 
-        <div className="row g-3 align-items-end">
-          <div className="col-md-6">
-            <label className="form-label fw-semibold">Keyword</label>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '1rem',
+          marginTop: '1.5rem'
+        }}>
+          <div>
+            <label className="form-label">Keyword</label>
             <input
               type="text"
-              className="form-control screenshot-search"
+              className="form-control"
               placeholder="e.g. AI art"
               value={filters.keyword}
               onChange={(e) => updateFilter("keyword", e.target.value, true)}
             />
           </div>
-          <div className="col-md-6">
-            <label className="form-label fw-semibold">Audience (optional)</label>
+          <div>
+            <label className="form-label">Audience (optional)</label>
             <input
               type="text"
-              className="form-control screenshot-search"
+              className="form-control"
               placeholder="e.g. startups"
               value={filters.audience}
               onChange={(e) => updateFilter("audience", e.target.value, true)}
             />
           </div>
 
-          <div className="col-md-3">
-            <label className="form-label fw-semibold">Sort by</label>
+          <div>
+            <label className="form-label">Sort by</label>
             <select
               className="form-select"
               value={filters.sort}
@@ -110,8 +115,8 @@ export default function AdvancedSearch() {
               <option value="comments">Comments</option>
             </select>
           </div>
-          <div className="col-md-3">
-            <label className="form-label fw-semibold">Timeframe</label>
+          <div>
+            <label className="form-label">Timeframe</label>
             <select
               className="form-select"
               value={filters.time}
@@ -125,8 +130,8 @@ export default function AdvancedSearch() {
               <option value="all">All Time</option>
             </select>
           </div>
-          <div className="col-md-3">
-            <label className="form-label fw-semibold">Results Limit</label>
+          <div>
+            <label className="form-label">Results Limit</label>
             <select
               className="form-select"
               value={filters.limit}
@@ -138,10 +143,11 @@ export default function AdvancedSearch() {
               <option value={100}>100</option>
             </select>
           </div>
-          <div className="col-md-3">
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
             <button
-              className="btn screenshot-btn w-100"
+              className="btn btn-primary"
               onClick={performSearch}
+              style={{ width: '100%' }}
             >
               Search
             </button>
@@ -154,21 +160,28 @@ export default function AdvancedSearch() {
       {error && <ErrorMessage message={error} />}
 
       {!loading && !error && posts.length > 0 && (
-        <div className="screenshot-card">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h5 className="mb-0 fw-bold">Search Results</h5>
-            <div>
-              <button className="btn btn-outline-secondary btn-sm me-2">
+        <div className="card">
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: '1rem',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <h3 style={{ margin: 0 }}>Search Results</h3>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button className="btn btn-outline-secondary btn-sm">
                 Export CSV
               </button>
-              <button className="btn screenshot-btn btn-sm">Upgrade for API</button>
+              <button className="btn btn-primary btn-sm">Upgrade for API</button>
             </div>
           </div>
-          <p className="text-muted small mb-3">
-            Showing {posts.length} results for “{fullQuery}”
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', marginBottom: '1rem' }}>
+            Showing {posts.length} result{posts.length !== 1 ? 's' : ''} for "{fullQuery}"
           </p>
           <div className="table-responsive">
-            <table className="table screenshot-table align-middle mb-0">
+            <table className="table">
               <thead>
                 <tr>
                   <th>Title</th>
@@ -178,47 +191,48 @@ export default function AdvancedSearch() {
                 </tr>
               </thead>
               <tbody>
-  {posts.map((post, i) => (
-    <tr key={post.id || i}>
-      <td>
-        <a
-          href={`https://www.reddit.com${post.permalink}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="fw-semibold text-decoration-none post-link"
-        >
-          {post.title}
-        </a>
-        {post.selftext && (
-          <div className="text-muted small">
-            {post.selftext.substring(0, 80)}...
-          </div>
-        )}
-      </td>
-      <td>
-        <a
-          href={`https://www.reddit.com/r/${post.subreddit}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-decoration-none text-emerald fw-medium"
-        >
-          r/{post.subreddit}
-        </a>
-      </td>
-      <td className="text-end">{post.score}</td>
-      <td className="text-end screenshot-value">{post.num_comments}</td>
-    </tr>
-  ))}
-</tbody>
-
+                {posts.map((post, i) => (
+                  <tr key={post.id || i}>
+                    <td>
+                      <a
+                        href={`https://www.reddit.com${post.permalink}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="post-link"
+                      >
+                        {post.title}
+                      </a>
+                      {post.selftext && (
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                          {post.selftext.substring(0, 80)}...
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <a
+                        href={`https://www.reddit.com/r/${post.subreddit}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald hover-emerald"
+                      >
+                        r/{post.subreddit}
+                      </a>
+                    </td>
+                    <td className="text-end">{post.score?.toLocaleString() || 0}</td>
+                    <td className="text-end screenshot-value">{post.num_comments?.toLocaleString() || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         </div>
       )}
 
       {!loading && !error && posts.length === 0 && fullQuery && (
-        <div className="screenshot-card text-center text-muted">
-          No results found for “{fullQuery}”.
+        <div className="card text-center" style={{ padding: '3rem' }}>
+          <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+            No results found for "{fullQuery}".
+          </p>
         </div>
       )}
     </div>
