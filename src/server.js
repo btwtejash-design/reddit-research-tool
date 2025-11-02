@@ -1,4 +1,4 @@
-// src/server.js: FIXED version (remove buggy /api/* middleware; use /api instead for logging)
+// src/server.js
 import dotenv from "dotenv";
 import express from "express";
 import request from "request";
@@ -28,9 +28,27 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// Existing routes
 app.use("/api/posts", postRoutes);
 app.use("/analytics", analyticsRoutes);
+
+// Create a dedicated axios instance for Reddit with a browser-like UA and common headers
+const redditClient = axios.create({
+  baseURL: "https://www.reddit.com",
+  timeout: 15000,
+  headers: {
+    // Browser-like UA — Reddit prefers realistic user agents
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    Accept: "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    Referer: "https://www.reddit.com/",
+  },
+  maxRedirects: 5,
+  // Do not throw for non-2xx automatically — we'll inspect response in catch
+  validateStatus: function (status) {
+    return status >= 200 && status < 500; // treat >=500 as error to catch; but allow 4xx to inspect
+  },
+});
 
 // TEST ROUTE: http://localhost:5000/test
 app.get("/test", (req, res) => {
@@ -38,7 +56,7 @@ app.get("/test", (req, res) => {
   res.json({ alive: true, message: 'Server good!' });
 });
 
-// ✅ FIXED /api/reddit: Dynamic params + detailed logs
+// ✅ FIXED /api/reddit: Dynamic params + detailed logs + safer headers
 app.get("/api/reddit", async (req, res) => {
   const { q: query, sort = 'relevance', t: time = 'all', limit = 20 } = req.query;
   const parsedLimit = parseInt(limit);
@@ -51,38 +69,88 @@ app.get("/api/reddit", async (req, res) => {
   }
 
   try {
-    const redditUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=${sort}&t=${time}&limit=${actualLimit}`;
-    console.log('🔗 Full Reddit URL (check limit param):', redditUrl);
+    const redditPath = `/search.json?q=${encodeURIComponent(query)}&sort=${encodeURIComponent(sort)}&t=${encodeURIComponent(time)}&limit=${actualLimit}`;
+    console.log('🔗 Full Reddit URL (check limit param):', redditClient.defaults.baseURL + redditPath);
 
-    const redditResponse = await axios.get(redditUrl, { 
-      headers: { 'User-Agent': 'RedditResearchApp/1.0' },
-      timeout: 10000 
-    });
+    // Use redditClient with proper headers
+    const redditResponse = await redditClient.get(redditPath);
 
-    const rawCount = redditResponse.data.data.children.length;
+    // If reddit returned a 4xx/5xx, redditResponse.status will show it because of validateStatus above
+    if (redditResponse.status >= 400) {
+      console.error("❌ Reddit responded with non-2xx:", {
+        status: redditResponse.status,
+        dataSnippet: JSON.stringify(redditResponse.data).slice(0, 200)
+      });
+      // Map Reddit 403 -> client-friendly message
+      const status = redditResponse.status === 403 ? 403 : 500;
+      return res.status(status).json({ error: `Reddit returned status ${redditResponse.status}` });
+    }
+
+    // Safely access children
+    const children = redditResponse.data?.data?.children || [];
+    const rawCount = children.length;
     console.log(`📊 Reddit API returned EXACTLY ${rawCount} posts (expected: ${actualLimit})`);
 
-    const posts = redditResponse.data.data.children.map((child) => ({
-      title: child.data.title,
-      subreddit: child.data.subreddit,
-      ups: child.data.score,
-      url: child.data.url,
-      author: child.data.author,
-      created_utc: child.data.created_utc,
-      comments: child.data.num_comments,
-      thumbnail: child.data.thumbnail,
-      permalink: child.data.permalink,
-    }));
+    const posts = children.map((child) => {
+      const d = child.data || {};
+      return {
+        title: d.title,
+        subreddit: d.subreddit,
+        ups: d.score || d.ups || 0,
+        url: d.url,
+        author: d.author,
+        created_utc: d.created_utc,
+        comments: d.num_comments,
+        thumbnail: d.thumbnail,
+        permalink: d.permalink,
+      };
+    });
 
     console.log(`✅ Backend sending ${posts.length} posts (matches raw: ${rawCount})`);
     res.json({ posts });
   } catch (error) {
+    // Detailed logging for Render
     console.error("❌ Axios/Reddit error details:", {
       message: error.message,
       status: error.response?.status,
-      code: error.code
+      headers: error.response?.headers,
+      dataSnippet: error.response?.data ? JSON.stringify(error.response.data).slice(0, 400) : null,
+      code: error.code,
     });
-    res.status(500).json({ error: "Failed to fetch Reddit posts" });
+    // If it's a known axios error with response status, forward 502 or 403 as appropriate
+    const status = error.response?.status || 500;
+    res.status(status === 403 ? 403 : 500).json({ error: "Failed to fetch Reddit posts", details: error.message });
+  }
+});
+
+// /r/:subreddit endpoint (also uses redditClient)
+app.get("/reddit/:subreddit", async (req, res) => {
+  const subreddit = req.params.subreddit;
+  try {
+    const resp = await redditClient.get(`/r/${encodeURIComponent(subreddit)}/hot.json?limit=5`);
+
+    if (resp.status >= 400) {
+      console.error("❌ Reddit /r/:subreddit non-2xx:", resp.status, resp.data);
+      return res.status(resp.status).json({ error: `Reddit returned ${resp.status}` });
+    }
+
+    const posts = resp.data?.data?.children.map((post) => {
+      const d = post.data || {};
+      return {
+        title: d.title,
+        url: d.url,
+        author: d.author,
+        ups: d.ups || d.score || 0,
+        comments: d.num_comments,
+        subreddit: d.subreddit,
+        thumbnail: d.thumbnail,
+      };
+    }) || [];
+
+    res.json(posts);
+  } catch (error) {
+    console.error("❌ /r/:subreddit error:", error.message, error.response?.status);
+    res.status(500).json({ error: "Failed to fetch subreddit data" });
   }
 });
 
@@ -112,29 +180,6 @@ app.get("/refresh", (req, res) => {
     if (error) return res.send(error);
     res.send(body);
   });
-});
-
-app.get("/reddit/:subreddit", async (req, res) => {
-  const subreddit = req.params.subreddit;
-  try {
-    const response = await axios.get(
-      `https://www.reddit.com/r/${subreddit}/hot.json?limit=5`
-    );
-    const posts = response.data.data.children.map((post) => ({
-      title: post.data.title,
-      url: post.data.url,
-      author: post.data.author,
-      ups: post.data.ups,
-      comments: post.data.num_comments,
-      subreddit: post.data.subreddit,
-      thumbnail: post.data.thumbnail,
-    }));
-
-    res.json(posts);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch subreddit data" });
-  }
 });
 
 app.get("/callback", (req, res) => {
