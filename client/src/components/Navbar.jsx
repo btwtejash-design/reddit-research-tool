@@ -6,10 +6,26 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark">
+    <nav className="navbar navbar-expand-lg">
       <div className="container">
-        <Link className="navbar-brand" to="/" onClick={() => setIsOpen(false)}>
-          Reddit Research
+        <Link 
+          className="navbar-brand" 
+          to="/" 
+          onClick={() => setIsOpen(false)}
+          style={{
+            fontSize: '1.5rem',
+            fontWeight: 800,
+            letterSpacing: '-0.02em'
+          }}
+        >
+          <span style={{
+            background: 'var(--gradient-text)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            Reddit Research
+          </span>
         </Link>
         <button
           className="navbar-toggler"
