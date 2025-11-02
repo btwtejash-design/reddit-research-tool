@@ -23,3 +23,37 @@ export async function fetchRedditPosts(query, sort = 'relevance', time = 'all', 
     throw new Error('Failed to fetch Reddit posts via server.');
   }
 }
+
+// Fetch trending audience collections dynamically
+export async function fetchTrendingCollections() {
+  try {
+    const url = `${API_BASE}/api/trending-collections`;
+    console.log('🟢 Fetching trending collections from:', url);
+    
+    const { data } = await axios.get(url);
+    
+    // Transform the data to match our collection format
+    const collections = data.collections.map(collection => ({
+      id: collection.id,
+      name: collection.name,
+      description: collection.description,
+      icon: collection.icon,
+      keywords: collection.keywords || [],
+      subreddits: collection.subreddits.map(sub => ({
+        name: sub.name,
+        displayName: sub.displayName || sub.name,
+        description: sub.description,
+        members: sub.subscribers,
+        activeUsers: sub.activeUsers,
+        icon: sub.icon,
+        keywords: sub.keywords || []
+      }))
+    }));
+    
+    console.log(`✅ Received ${collections.length} trending collections`);
+    return collections;
+  } catch (error) {
+    console.error('Backend API Error:', error);
+    throw new Error('Failed to fetch trending collections. Falling back to default collections.');
+  }
+}

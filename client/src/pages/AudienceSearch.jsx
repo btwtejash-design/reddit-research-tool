@@ -1,20 +1,57 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AUDIENCE_COLLECTIONS, searchCollections } from '../utils/audienceCollections';
+import { fetchTrendingCollections } from '../utils/redditAPI';
 import SubredditCollection from '../components/SubredditCollection';
+import Loader from '../components/Loader';
+import ErrorMessage from '../components/ErrorMessage';
 
 export default function AudienceSearch() {
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredCollections, setFilteredCollections] = useState(AUDIENCE_COLLECTIONS);
+  const [collections, setCollections] = useState([]);
+  const [filteredCollections, setFilteredCollections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [useTrending, setUseTrending] = useState(true);
+
+  // Fetch trending collections on mount
+  useEffect(() => {
+    async function loadCollections() {
+      setLoading(true);
+      setError(null);
+      try {
+        const trendingCollections = await fetchTrendingCollections();
+        setCollections(trendingCollections);
+        setFilteredCollections(trendingCollections);
+        setUseTrending(true);
+      } catch (err) {
+        console.warn('Failed to fetch trending, using default collections:', err);
+        // Fallback to hardcoded collections
+        setCollections(AUDIENCE_COLLECTIONS);
+        setFilteredCollections(AUDIENCE_COLLECTIONS);
+        setUseTrending(false);
+        setError('Using default collections. Trending data unavailable.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadCollections();
+  }, []);
 
   const handleSearch = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
     
     if (query.trim() === '') {
-      setFilteredCollections(AUDIENCE_COLLECTIONS);
+      setFilteredCollections(collections);
     } else {
-      const results = searchCollections(query);
+      // Search through current collections
+      const lowerQuery = query.toLowerCase();
+      const results = collections.filter(collection =>
+        collection.name.toLowerCase().includes(lowerQuery) ||
+        collection.description.toLowerCase().includes(lowerQuery) ||
+        collection.keywords.some(keyword => keyword.toLowerCase().includes(lowerQuery))
+      );
       setFilteredCollections(results);
     }
   };
@@ -48,9 +85,66 @@ export default function AudienceSearch() {
     );
   }
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="container">
+        <Loader />
+      </div>
+    );
+  }
+
+  // Show warning if using default collections (not blocking, just informational)
+  const showWarning = error && !useTrending && collections.length > 0;
+
   // Show collection grid
   return (
     <div className="container">
+      {showWarning && (
+        <div style={{ 
+          marginBottom: '1.5rem',
+          padding: '1rem',
+          backgroundColor: '#fff3cd',
+          border: '1px solid #ffc107',
+          borderRadius: 'var(--radius-lg)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}>
+          <span style={{ color: '#856404', fontSize: '0.9375rem' }}>
+            ⚠️ {error}
+          </span>
+          <button 
+            className="btn btn-sm"
+            onClick={async () => {
+              setLoading(true);
+              setError(null);
+              try {
+                const trendingCollections = await fetchTrendingCollections();
+                setCollections(trendingCollections);
+                setFilteredCollections(trendingCollections);
+                setUseTrending(true);
+              } catch (err) {
+                setError('Using default collections. Trending data unavailable.');
+                setUseTrending(false);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            style={{ 
+              padding: '0.5rem 1rem',
+              fontSize: '0.875rem',
+              backgroundColor: 'var(--warning)',
+              color: 'white',
+              border: 'none'
+            }}
+          >
+            Retry Trending Data
+          </button>
+        </div>
+      )}
       <div style={{ marginBottom: '3rem', textAlign: 'center' }}>
         <h1>Discover Audience Collections</h1>
         <p style={{ 
@@ -58,10 +152,21 @@ export default function AudienceSearch() {
           color: 'var(--text-secondary)', 
           maxWidth: '700px', 
           margin: '0 auto',
-          marginBottom: '2rem'
+          marginBottom: '1rem'
         }}>
-          Explore curated collections of Reddit communities organized by audience type
+          {useTrending 
+            ? 'Explore trending Reddit communities organized by audience type' 
+            : 'Explore curated collections of Reddit communities organized by audience type'}
         </p>
+        {useTrending && (
+          <p style={{ 
+            fontSize: '0.875rem', 
+            color: 'var(--text-muted)', 
+            marginBottom: '2rem'
+          }}>
+            🔥 Showing trending communities updated in real-time
+          </p>
+        )}
         
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
           <input
