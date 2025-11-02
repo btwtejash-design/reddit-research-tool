@@ -3,6 +3,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import request from "request";
+import axios from "axios";
 import connectDB from "./config/db.js";
 import postRoutes from "./routes/postRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
@@ -110,9 +111,9 @@ app.get("/api/trending-collections", async (req, res) => {
   try {
     console.log("🔥 Fetching trending collections...");
     
-    // Fetch popular subreddits using public Reddit API
-    const popularResponse = await fetch("https://www.reddit.com/subreddits/popular.json?limit=150");
-    const popularData = await popularResponse.json();
+    // Fetch popular subreddits using public Reddit API with axios
+    const popularResponse = await axios.get("https://www.reddit.com/subreddits/popular.json?limit=150");
+    const popularData = popularResponse.data;
     
     const allSubreddits = popularData.data?.children || [];
 

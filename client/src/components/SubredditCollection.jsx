@@ -4,7 +4,9 @@ import React from 'react';
 export default function SubredditCollection({ subreddits, audienceName }) {
   if (!subreddits || subreddits.length === 0) {
     return (
-      <div className="card text-center" style={{ padding: '2rem' }}>
+      <div className="card text-center" style={{ padding: '4rem 2rem' }}>
+        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔍</div>
+        <h3 style={{ marginBottom: '0.5rem' }}>No communities found</h3>
         <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
           No subreddits found for this audience.
         </p>
@@ -12,19 +14,39 @@ export default function SubredditCollection({ subreddits, audienceName }) {
     );
   }
 
+  const totalMembers = subreddits.reduce((sum, sub) => sum + (sub.members || 0), 0);
+
   return (
-    <div className="card">
-      <h3 style={{ marginBottom: '1rem' }}>
-        {audienceName} Communities
-      </h3>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
-        Explore {subreddits.length} subreddit{subreddits.length !== 1 ? 's' : ''} where {audienceName.toLowerCase()} gather and discuss
-      </p>
-      
+    <div>
+      {/* Header */}
+      <div className="card" style={{
+        background: `linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%)`,
+        color: 'white',
+        padding: '2rem',
+        marginBottom: '2rem',
+        textAlign: 'center'
+      }}>
+        <h2 style={{ 
+          margin: '0 0 0.5rem 0', 
+          fontSize: '2rem',
+          fontWeight: 700
+        }}>
+          {audienceName} Communities
+        </h2>
+        <p style={{ 
+          margin: 0, 
+          fontSize: '1rem',
+          opacity: 0.95
+        }}>
+          {subreddits.length} active communit{subreddits.length !== 1 ? 'ies' : 'y'} • {totalMembers > 0 ? `${(totalMembers / 1000).toFixed(0)}k+` : 'Thousands of'} members
+        </p>
+      </div>
+
+      {/* Subreddits Grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-        gap: '1rem'
+        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gap: '1.5rem'
       }}>
         {subreddits.map((subreddit, index) => (
           <SubredditItem key={index} subreddit={subreddit} />
@@ -60,17 +82,21 @@ function SubredditItem({ subreddit }) {
       style={{
         textDecoration: 'none',
         display: 'block',
-        padding: '1.25rem',
-        transition: 'all 0.2s ease',
-        cursor: 'pointer'
+        padding: '1.5rem',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        cursor: 'pointer',
+        border: '2px solid transparent',
+        background: 'white'
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+        e.currentTarget.style.transform = 'translateY(-6px) scale(1.02)';
+        e.currentTarget.style.boxShadow = 'var(--shadow-xl)';
+        e.currentTarget.style.borderColor = 'var(--primary)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.transform = 'translateY(0) scale(1)';
         e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+        e.currentTarget.style.borderColor = 'transparent';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
