@@ -9,7 +9,7 @@ export default function Dashboard() {
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/reddit/${subreddit}`);
+      const response = await axios.get(`https://reddit-research-tool.onrender.com/reddit/${subreddit}`);
       setPosts(response.data);
     } catch (err) {
       console.error(err);

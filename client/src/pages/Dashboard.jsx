@@ -18,7 +18,7 @@ export default function Dashboard() {
     setPosts([]);
 
     try {
-      const { data } = await axios.get(`http://localhost:5000/reddit/${subreddit}`);
+      const { data } = await axios.get(`https://reddit-research-tool.onrender.com/reddit/${subreddit}`);
       setPosts(data);
     } catch (err) {
       console.error(err);

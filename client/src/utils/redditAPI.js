@@ -1,7 +1,7 @@
 // src/utils/redditAPI.js: Added logs (minor update)
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://reddit-research-tool.onrender.com';
 
 export async function fetchRedditPosts(query, sort = 'relevance', time = 'all', limit = 20) {
   try {

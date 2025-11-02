@@ -8,7 +8,7 @@ export default function App() {
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/reddit/${subreddit}`);
+      const res = await fetch(`https://reddit-research-tool.onrender.com/reddit/${subreddit}`);
       const data = await res.json();
       setPosts(data);
     } catch (err) {

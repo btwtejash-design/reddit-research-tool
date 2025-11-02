@@ -6,7 +6,7 @@ export default function AnalyticsDashboard() {
   const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/analytics')
+    axios.get('https://reddit-research-tool.onrender.com/analytics')
       .then(res => setAnalytics(res.data))
       .catch(err => console.error('Error loading analytics:', err));
   }, []);

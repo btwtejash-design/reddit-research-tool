@@ -9,8 +9,8 @@ export default defineConfig({
   ],
   server: {
   proxy: {
-    '/api': 'http://localhost:5000',
-    '/reddit': 'http://localhost:5000',
+    '/api': 'https://reddit-research-tool.onrender.com',
+    '/reddit': 'https://reddit-research-tool.onrender.com',
   },
 },
 })
